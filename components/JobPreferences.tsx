@@ -24,48 +24,95 @@ export const JobPreferences: React.FC<JobPreferencesProps> = ({ initialData, onS
     setData(prev => ({ ...prev, [field]: value }));
   };
 
-  const getScoreConfig = (score: number) => {
-    if (score >= 80) return { color: 'text-green-600 dark:text-green-400', borderColor: 'border-green-500', label: 'Excellent' };
-    if (score >= 60) return { color: 'text-yellow-600 dark:text-yellow-400', borderColor: 'border-yellow-500', label: 'Good' };
-    return { color: 'text-red-600 dark:text-red-400', borderColor: 'border-red-500', label: 'Needs Work' };
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return '#10b981'; // Green 500
+    if (score >= 60) return '#eab308'; // Yellow 500
+    return '#ef4444'; // Red 500
   };
+  
+  const getScoreLabel = (score: number) => {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    return 'Needs Work';
+  };
+
+  // SVG Circle calculations
+  const radius = 50;
+  const stroke = 8;
+  const normalizedRadius = radius - stroke * 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - ((data.atsScore || 0) / 100) * circumference;
 
   return (
     <div className="max-w-3xl mx-auto">
       {/* ATS Score Section */}
       {data.atsScore !== undefined && (
-        <div className="mb-8 p-6 glass-panel rounded-2xl border border-gray-200 dark:border-gray-800 relative overflow-hidden">
+        <div className="mb-8 p-6 glass-panel rounded-2xl border border-gray-200 dark:border-gray-800 relative overflow-hidden transition-all hover:shadow-lg">
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
           
-          <h3 className="text-lg font-display font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2 relative z-10">
-             <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-             </svg>
-             ATS Resume Analysis
-          </h3>
+          <div className="flex justify-between items-center mb-6 relative z-10">
+            <h3 className="text-lg font-display font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Resume Analysis
+            </h3>
+            <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                AI Powered
+            </span>
+          </div>
           
           <div className="flex flex-col md:flex-row gap-8 items-center relative z-10">
              {/* Score Circle */}
-             <div className="flex flex-col items-center">
-                <div className={`relative w-32 h-32 flex items-center justify-center rounded-full border-4 ${getScoreConfig(data.atsScore).borderColor} shadow-[0_0_20px_rgba(0,0,0,0.05)] bg-white dark:bg-gray-900`}>
-                    <div className="text-center">
-                    <span className={`text-4xl font-bold ${getScoreConfig(data.atsScore).color}`}>{data.atsScore}</span>
-                    <span className="text-xs font-medium uppercase block text-gray-400">Score</span>
-                    </div>
+             <div className="flex flex-col items-center justify-center relative w-40 h-40">
+                <svg
+                    height="100%"
+                    width="100%"
+                    viewBox="0 0 100 100"
+                    className="transform -rotate-90"
+                >
+                    <circle
+                        stroke="currentColor"
+                        className="text-gray-200 dark:text-gray-800"
+                        strokeWidth={stroke}
+                        fill="transparent"
+                        r={normalizedRadius}
+                        cx="50"
+                        cy="50"
+                    />
+                    <circle
+                        stroke={getScoreColor(data.atsScore)}
+                        strokeWidth={stroke}
+                        strokeDasharray={circumference + ' ' + circumference}
+                        style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s ease-in-out' }}
+                        strokeLinecap="round"
+                        fill="transparent"
+                        r={normalizedRadius}
+                        cx="50"
+                        cy="50"
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-gray-900 dark:text-white">{data.atsScore}</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-gray-500">{getScoreLabel(data.atsScore)}</span>
                 </div>
-                <span className={`mt-3 text-sm font-bold uppercase tracking-wider ${getScoreConfig(data.atsScore).color}`}>
-                    {getScoreConfig(data.atsScore).label}
-                </span>
              </div>
              
              {/* Recommendations */}
              <div className="flex-grow w-full md:w-auto">
-               <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">AI Recommendations</h4>
+               <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                   <span>Key Improvements</span>
+                   <div className="h-px bg-gray-200 dark:bg-gray-800 flex-grow"></div>
+               </h4>
                <ul className="space-y-3">
                   {data.atsRecommendations?.map((rec, idx) => (
-                    <li key={idx} className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                       <span className="mr-3 text-blue-500 mt-0.5">•</span>
-                       {rec}
+                    <li key={idx} className="flex items-start text-sm text-gray-700 dark:text-gray-300 bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-colors">
+                       <span className="mr-3 text-blue-500 mt-0.5 flex-shrink-0">
+                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                           </svg>
+                       </span>
+                       <span>{rec}</span>
                     </li>
                   ))}
                </ul>
