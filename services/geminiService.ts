@@ -8,11 +8,17 @@ export const analyzeResume = async (fileBase64: string, mimeType: string): Promi
   const model = "gemini-2.5-flash";
   
   const prompt = `
-    Analyze the provided resume. Extract the following details specifically to fill into a job search template:
-    1. Current Job Title (job name)
-    2. Years of Experience (approximate number)
-    3. Key Skills (comma separated list)
-    4. Certifications (comma separated list, or "None" if none found)
+    Analyze the provided resume. Extract specific details for a job search and perform an ATS (Applicant Tracking System) audit.
+
+    1. **Extraction**:
+       - Current Job Title (job name)
+       - Years of Experience (approximate number)
+       - Key Skills (comma separated list)
+       - Certifications (comma separated list, or "None" if none found)
+
+    2. **ATS Audit**:
+       - **ATS Score**: Calculate a score from 0-100 based on keyword relevance, formatting clarity, quantifiable achievements, and overall impact. Be strict but fair.
+       - **Recommendations**: Provide 3-4 specific, actionable, and short bullet points on how to improve the resume (e.g., "Use more action verbs", "Quantify sales results", "Add specific technical keywords").
 
     Return the result in JSON format.
   `;
@@ -40,8 +46,13 @@ export const analyzeResume = async (fileBase64: string, mimeType: string): Promi
             experienceYears: { type: Type.STRING },
             skills: { type: Type.STRING },
             certifications: { type: Type.STRING },
+            atsScore: { type: Type.NUMBER },
+            atsRecommendations: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING } 
+            }
           },
-          required: ["jobName", "experienceYears", "skills", "certifications"]
+          required: ["jobName", "experienceYears", "skills", "certifications", "atsScore", "atsRecommendations"]
         }
       }
     });
@@ -63,22 +74,47 @@ export const searchForJobs = async (
   interests: string
 ): Promise<SearchResult> => {
   
-  // Constructing the exact prompt requested by the user
+  // Constructing a "Deep Search" prompt to cover the whole internet
   const searchPrompt = `
-    I work as a ${data.jobName} and my experience is ${data.experienceYears}.
-    My skills: ${data.skills}.
-    My certifications: ${data.certifications}.
-    I am looking for a job in ${location}.
-    Specifically, I am interested in: ${interests}.
+    Role: You are an expert AI Recruitment Researcher performing an exhaustive "Deep Web" search.
+
+    Candidate Profile:
+    - Role: ${data.jobName}
+    - Experience: ${data.experienceYears}
+    - Skills: ${data.skills}
+    - Certifications: ${data.certifications}
+    - Target Location: ${location}
+    - Specific Interests: ${interests}
     
-    Find me specific job listings. 
-    **MANDATORY**: You must specifically search for and prioritize open positions on **Naukri**, **Indeed**, and **LinkedIn** if available in the region, along with other company career pages.
+    Task: Conduct a comprehensive search across the entire internet to find every relevant active job listing. Do not limit yourself to one platform.
+
+    Search Scope:
+    1. **Major Aggregators**: Scan LinkedIn, Indeed, Naukri, Glassdoor, Monster, ZipRecruiter, and Google Jobs.
+    2. **Startup & Tech Hubs**: Search Wellfound (AngelList), Y Combinator (Bookface/Jobs), BuiltIn, and Product Hunt.
+    3. **Direct Company Career Pages**: Identify companies in ${location} matching the profile and find direct links to their ATS (Lever, Greenhouse, Ashby, Workday, etc.).
+    4. **Niche Communities**: Search specialized boards (e.g., GitHub/StackOverflow for devs, Behance/Dribbble for creative, ProBlogger for writing).
+
+    Directives:
+    - **Maximize Coverage**: Find as many high-quality, distinct listings as possible.
+    - **Deep Matching**: Look for roles that specifically mention the candidate's key skills (${data.skills}).
+    - **Freshness**: Prioritize jobs posted within the last 14 days.
     
-    I want a separated list of all available jobs with their exact locations.
-    Details to contact them and the job application links if there is any.
-    Please search in the most recent sources to provide me with exact and fresh details.
+    Structure your response using the following Markdown format exactly:
+
+    # Group: [Descriptive Category Name, e.g., "Top Corporate Roles", "High-Growth Startups", "Remote Opportunities"]
+    **Summary**: [Brief market insight about this specific category]
+    *   [Job Title] at [Company] - [Location] ([Apply Link])
+    *   [Job Title] at [Company] - [Location] ([Apply Link])
     
-    Format the output with Markdown links for any URLs found, e.g., [Apply on Naukri](https://...).
+    # Group: [Another Category]
+    **Summary**: [Insight]
+    *   [Job Title] at [Company] - [Location] ([Apply Link])
+
+    (Continue for up to 5-6 distinct groups to organize the large volume of results)
+
+    Rules:
+    - Ensure every job has a direct URL. If a direct link is unavailable, link to the company's career page.
+    - Do not hallucinate links.
   `;
 
   try {

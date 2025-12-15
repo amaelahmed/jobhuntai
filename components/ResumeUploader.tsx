@@ -48,10 +48,10 @@ export const ResumeUploader: React.FC<ResumeUploaderProps> = ({ onUpload }) => {
         onDrop={handleDrop}
         className={`
           relative group cursor-pointer transition-all duration-300 ease-out
-          rounded-2xl border border-dashed
+          rounded-2xl border-2 border-dashed
           ${isDragging 
             ? 'border-blue-500 bg-blue-500/5 shadow-2xl shadow-blue-500/10' 
-            : 'border-gray-700 hover:border-gray-500 hover:bg-gray-800/30 bg-gray-900/20'
+            : 'border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/30 bg-white/50 dark:bg-gray-900/20'
           }
         `}
       >
@@ -59,17 +59,17 @@ export const ResumeUploader: React.FC<ResumeUploaderProps> = ({ onUpload }) => {
           
           <div className={`
             w-16 h-16 mb-6 rounded-2xl flex items-center justify-center transition-colors duration-300
-            ${isDragging ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-400 group-hover:bg-gray-700 group-hover:text-gray-300'}
+            ${isDragging ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 group-hover:text-gray-600 dark:group-hover:text-gray-300'}
           `}>
              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
              </svg>
           </div>
 
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             Upload your resume
           </h3>
-          <p className="text-gray-500 text-sm mb-8 max-w-sm">
+          <p className="text-gray-500 dark:text-gray-500 text-sm mb-8 max-w-sm">
             Drag and drop your PDF or Image file here, or click to browse your files.
           </p>
           
@@ -82,7 +82,7 @@ export const ResumeUploader: React.FC<ResumeUploaderProps> = ({ onUpload }) => {
           />
           <label 
             htmlFor="resume-upload"
-            className="px-6 py-2.5 bg-white text-gray-900 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg shadow-white/5"
+            className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-semibold rounded-lg hover:opacity-90 transition-opacity shadow-lg"
           >
             Select File
           </label>

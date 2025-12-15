@@ -3,6 +3,8 @@ export interface ParsedResumeData {
   experienceYears: string;
   skills: string;
   certifications: string;
+  atsScore?: number;
+  atsRecommendations?: string[];
 }
 
 export interface JobSearchParams {
