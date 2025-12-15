@@ -1,0 +1,5 @@
+{
+  "name": "Job Search Assistant",
+  "description": "An AI-powered job search assistant that analyzes your resume and finds live local job listings using Google Search grounding.",
+  "requestFramePermissions": []
+}
