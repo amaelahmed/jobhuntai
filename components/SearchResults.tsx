@@ -1,13 +1,17 @@
 import React from 'react';
-import { SearchResult } from '../types';
+import { SearchResult, GroundingSource } from '../types';
 
 interface SearchResultsProps {
   result: SearchResult;
   onReset: () => void;
+  savedJobs: GroundingSource[];
+  onToggleSave: (job: GroundingSource) => void;
 }
 
-export const SearchResults: React.FC<SearchResultsProps> = ({ result, onReset }) => {
+export const SearchResults: React.FC<SearchResultsProps> = ({ result, onReset, savedJobs, onToggleSave }) => {
   
+  const isJobSaved = (uri: string) => savedJobs.some(j => j.uri === uri);
+
   const formatText = (text: string) => {
     return text.split('\n').map((line, idx) => {
       const cleanLine = line.trim();
@@ -98,25 +102,39 @@ export const SearchResults: React.FC<SearchResultsProps> = ({ result, onReset })
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Application Sources</h3>
                 {result.sources.length > 0 ? (
                     <div className="space-y-3">
-                        {result.sources.map((source, idx) => (
-                            <a 
-                                key={idx}
-                                href={source.uri}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="group block p-3 rounded-lg bg-[#111827] border border-gray-800 hover:border-blue-500/50 hover:bg-[#161e31] transition-all"
-                            >
-                                <div className="flex justify-between items-start">
-                                    <p className="text-sm font-medium text-gray-300 group-hover:text-white truncate pr-2">
-                                        {source.title || "Job Link"}
-                                    </p>
-                                    <svg className="w-3.5 h-3.5 text-gray-600 group-hover:text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                    </svg>
+                        {result.sources.map((source, idx) => {
+                            const saved = isJobSaved(source.uri);
+                            return (
+                                <div 
+                                    key={idx}
+                                    className="group flex flex-col p-3 rounded-lg bg-[#111827] border border-gray-800 hover:border-blue-500/50 hover:bg-[#161e31] transition-all relative pr-10"
+                                >
+                                    <a 
+                                        href={source.uri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <p className="text-sm font-medium text-gray-300 group-hover:text-white truncate pr-2">
+                                                {source.title || "Job Link"}
+                                            </p>
+                                        </div>
+                                        <p className="text-xs text-gray-600 truncate mt-1">{new URL(source.uri).hostname}</p>
+                                    </a>
+                                    
+                                    <button 
+                                        onClick={() => onToggleSave(source)}
+                                        className={`absolute right-3 top-3 p-1 rounded-full transition-colors ${saved ? 'text-blue-400 bg-blue-500/10' : 'text-gray-600 hover:text-gray-300'}`}
+                                        title={saved ? "Remove from saved" : "Save job"}
+                                    >
+                                        <svg className="w-4 h-4" fill={saved ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                                        </svg>
+                                    </button>
                                 </div>
-                                <p className="text-xs text-gray-600 truncate mt-1">{new URL(source.uri).hostname}</p>
-                            </a>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <p className="text-sm text-gray-600">No direct links found.</p>
@@ -128,7 +146,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({ result, onReset })
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
                 <h3 className="text-sm font-semibold text-white mb-2">Search Insight</h3>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                    Our AI has prioritized listings from Naukri and Indeed as requested. Review the main list for detailed application instructions.
+                    Our AI has prioritized listings from Naukri and Indeed as requested. Use the bookmark icon to save jobs to your personal list.
                 </p>
              </div>
           </div>

@@ -1,15 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ResumeUploader } from './components/ResumeUploader';
 import { JobPreferences } from './components/JobPreferences';
 import { SearchResults } from './components/SearchResults';
+import { SavedJobs } from './components/SavedJobs';
 import { analyzeResume, searchForJobs } from './services/geminiService';
-import { AppStep, ParsedResumeData, SearchResult } from './types';
+import { AppStep, ParsedResumeData, SearchResult, GroundingSource } from './types';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<AppStep>(AppStep.UPLOAD);
   const [resumeData, setResumeData] = useState<ParsedResumeData | null>(null);
   const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savedJobs, setSavedJobs] = useState<GroundingSource[]>([]);
+
+  // Load saved jobs from local storage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('job_hunter_saved_jobs');
+    if (saved) {
+      try {
+        setSavedJobs(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse saved jobs", e);
+      }
+    }
+  }, []);
+
+  // Save to local storage whenever list changes
+  useEffect(() => {
+    localStorage.setItem('job_hunter_saved_jobs', JSON.stringify(savedJobs));
+  }, [savedJobs]);
+
+  const toggleSaveJob = (job: GroundingSource) => {
+    setSavedJobs(prev => {
+      const exists = prev.find(j => j.uri === job.uri);
+      if (exists) {
+        return prev.filter(j => j.uri !== job.uri);
+      }
+      return [...prev, job];
+    });
+  };
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -60,20 +89,43 @@ const App: React.FC = () => {
     setErrorMsg(null);
   };
 
+  const goToSavedJobs = () => {
+    setStep(AppStep.SAVED_JOBS);
+  };
+
+  const goBackFromSaved = () => {
+    if (searchResults) {
+      setStep(AppStep.RESULTS);
+    } else if (resumeData) {
+      setStep(AppStep.CONFIRM_DETAILS);
+    } else {
+      setStep(AppStep.UPLOAD);
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col bg-[#030712] text-gray-200 font-sans">
       
       {/* Professional Header */}
       <header className="sticky top-0 z-50 bg-[#030712]/80 backdrop-blur-md border-b border-gray-800">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-           <div className="flex items-center space-x-2">
+           <div 
+             className="flex items-center space-x-2 cursor-pointer" 
+             onClick={() => step !== AppStep.ANALYZING && step !== AppStep.SEARCHING && handleReset()}
+           >
               <span className="text-lg font-display font-bold text-white tracking-tight">Job Search</span>
            </div>
            
-           <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-400">
-             <span className="text-white">Dashboard</span>
-             <span>Applications</span>
-             <span>Profile</span>
+           <nav className="flex items-center space-x-6 text-sm font-medium">
+             <button 
+                onClick={goToSavedJobs}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors ${step === AppStep.SAVED_JOBS ? 'bg-blue-500/10 text-blue-400' : 'text-gray-400 hover:text-white'}`}
+             >
+               <svg className="w-4 h-4" fill={step === AppStep.SAVED_JOBS ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+               </svg>
+               <span>Saved Jobs ({savedJobs.length})</span>
+             </button>
            </nav>
         </div>
       </header>
@@ -82,33 +134,34 @@ const App: React.FC = () => {
       <main className="flex-grow pt-12 px-6 pb-20">
         <div className="max-w-4xl mx-auto">
             
-          {/* Clean Progress Steps */}
-          <div className="mb-16">
-             <div className="flex items-center justify-between relative">
-                <div className="absolute left-0 right-0 top-1/2 h-px bg-gray-800 -z-10"></div>
-                {[AppStep.UPLOAD, AppStep.CONFIRM_DETAILS, AppStep.RESULTS].map((s, i) => {
-                    const currentIdx = [AppStep.UPLOAD, AppStep.CONFIRM_DETAILS, AppStep.RESULTS].indexOf(s);
-                    // Simplify mapping for visual progress
-                    let stepNum = 0;
-                    if (step === AppStep.UPLOAD || step === AppStep.ANALYZING) stepNum = 0;
-                    else if (step === AppStep.CONFIRM_DETAILS || step === AppStep.SEARCHING) stepNum = 1;
-                    else if (step === AppStep.RESULTS) stepNum = 2;
-                    else stepNum = 0; 
+          {/* Clean Progress Steps - Only show if not in Saved Jobs view */}
+          {step !== AppStep.SAVED_JOBS && (
+            <div className="mb-16">
+               <div className="flex items-center justify-between relative">
+                  <div className="absolute left-0 right-0 top-1/2 h-px bg-gray-800 -z-10"></div>
+                  {[AppStep.UPLOAD, AppStep.CONFIRM_DETAILS, AppStep.RESULTS].map((s, i) => {
+                      // Simplify mapping for visual progress
+                      let stepNum = 0;
+                      if (step === AppStep.UPLOAD || step === AppStep.ANALYZING) stepNum = 0;
+                      else if (step === AppStep.CONFIRM_DETAILS || step === AppStep.SEARCHING) stepNum = 1;
+                      else if (step === AppStep.RESULTS) stepNum = 2;
+                      else stepNum = 0; 
 
-                    const isActive = i <= stepNum;
-                    const isCurrent = i === stepNum;
+                      const isActive = i <= stepNum;
+                      const isCurrent = i === stepNum;
 
-                    return (
-                        <div key={s} className="flex flex-col items-center bg-[#030712] px-4">
-                            <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${isActive ? 'bg-blue-500 border-blue-500' : 'bg-[#030712] border-gray-600'}`}></div>
-                            <span className={`mt-2 text-xs font-medium tracking-wide ${isCurrent ? 'text-white' : 'text-gray-500'}`}>
-                                {s === AppStep.UPLOAD ? 'Resume' : s === AppStep.CONFIRM_DETAILS ? 'Preferences' : 'Opportunities'}
-                            </span>
-                        </div>
-                    )
-                })}
-             </div>
-          </div>
+                      return (
+                          <div key={s} className="flex flex-col items-center bg-[#030712] px-4">
+                              <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${isActive ? 'bg-blue-500 border-blue-500' : 'bg-[#030712] border-gray-600'}`}></div>
+                              <span className={`mt-2 text-xs font-medium tracking-wide ${isCurrent ? 'text-white' : 'text-gray-500'}`}>
+                                  {s === AppStep.UPLOAD ? 'Resume' : s === AppStep.CONFIRM_DETAILS ? 'Preferences' : 'Opportunities'}
+                              </span>
+                          </div>
+                      )
+                  })}
+               </div>
+            </div>
+          )}
 
           {step === AppStep.UPLOAD && (
             <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -152,8 +205,23 @@ const App: React.FC = () => {
 
           {step === AppStep.RESULTS && searchResults && (
             <div className="animate-in slide-in-from-bottom-8 duration-700">
-                <SearchResults result={searchResults} onReset={handleReset} />
+                <SearchResults 
+                  result={searchResults} 
+                  onReset={handleReset}
+                  savedJobs={savedJobs}
+                  onToggleSave={toggleSaveJob}
+                />
             </div>
+          )}
+
+          {step === AppStep.SAVED_JOBS && (
+             <div className="animate-in slide-in-from-right-8 duration-500">
+               <SavedJobs 
+                 jobs={savedJobs} 
+                 onToggleSave={toggleSaveJob} 
+                 onBack={goBackFromSaved}
+               />
+             </div>
           )}
 
           {step === AppStep.ERROR && (
